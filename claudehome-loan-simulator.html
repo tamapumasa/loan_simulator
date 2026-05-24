@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClaudeHome — ローンシミュレーター v2</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#F7F5F0; --surface:#FFF; --surface2:#F0EDE6;
+  --navy:#1A2340; --navy2:#2C3B60;
+  --gold:#C9963A; --gold2:#E8B84B;
+  --text:#1A2340; --text2:#5A6478; --text3:#9AA0AE;
+  --green:#2A7A4B; --green-bg:#EBF5EF;
+  --amber:#B8620A; --amber-bg:#FEF3E2;
+  --red:#C02B2B; --red-bg:#FDECEC;
+  --purple:#5B3D9E; --purple-bg:#F0EBFC;
+  --border:rgba(26,35,64,0.1); --radius:14px; --radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+.shell{display:grid;grid-template-columns:330px 1fr;min-height:100vh;}
+.sidebar{background:var(--navy);padding:24px 20px;display:flex;flex-direction:column;gap:16px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.main{padding:24px;overflow-y:auto;}
+.logo{font-family:'DM Serif Display',serif;font-size:17px;color:#fff;display:flex;align-items:center;gap:8px;}
+.logo-dot{width:7px;height:7px;border-radius:50%;background:var(--gold2);}
+.logo-sub{font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:.06em;}
+.sec-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:4px;}
+.divider{height:1px;background:rgba(255,255,255,0.08);}
+.slider-group{display:flex;flex-direction:column;gap:12px;}
+.sl-row{display:flex;flex-direction:column;gap:5px;}
+.sl-head{display:flex;justify-content:space-between;align-items:baseline;}
+.sl-label{font-size:10px;color:rgba(255,255,255,0.45);}
+.sl-value{font-size:14px;font-weight:500;color:#fff;}
+.sl-value span{font-size:10px;font-weight:300;color:rgba(255,255,255,0.45);margin-left:2px;}
+.sl-refs{display:flex;justify-content:space-between;margin-top:2px;}
+.sl-ref{font-size:9px;color:rgba(255,255,255,0.25);cursor:default;}
+.sl-ref.mark{color:var(--gold2);font-weight:500;}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,0.15);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold2);border:2px solid var(--navy);box-shadow:0 0 0 3px rgba(232,184,75,0.25);}
+.sc-tabs{display:flex;gap:5px;}
+.sc-tab{flex:1;padding:5px 6px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.35);font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;text-align:center;transition:all .15s;}
+.sc-tab.active{background:var(--gold);border-color:var(--gold);color:var(--navy);font-weight:500;}
+.sc-tab:hover:not(.active){background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);}
+/* Toggle row */
+.toggle-row{display:flex;align-items:center;gap:8px;}
+.toggle-label{font-size:10px;color:rgba(255,255,255,0.45);}
+.toggle{position:relative;width:34px;height:18px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-track{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:9px;background:rgba(255,255,255,0.15);cursor:pointer;transition:background .2s;}
+.toggle input:checked + .toggle-track{background:var(--gold);}
+.toggle-thumb{position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s;pointer-events:none;}
+.toggle input:checked ~ .toggle-thumb{transform:translateX(16px);}
+/* Pair section */
+.pair-section{display:none;}
+.pair-section.show{display:flex;flex-direction:column;gap:12px;}
+.pair-note{font-size:9px;color:rgba(255,200,100,0.7);background:rgba(201,150,58,0.12);border-radius:6px;padding:6px 8px;line-height:1.5;}
+/* Main */
+.page-title{font-family:'DM Serif Display',serif;font-size:24px;color:var(--navy);margin-bottom:3px;}
+.page-sub{font-size:12px;color:var(--text2);margin-bottom:20px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;position:relative;overflow:hidden;transition:transform .15s;}
+.kpi:hover{transform:translateY(-1px);}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi.k-blue::before{background:var(--navy2);}
+.kpi.k-gold::before{background:var(--gold);}
+.kpi.k-green::before{background:var(--green);}
+.kpi.k-ratio::before{background:var(--red);}
+.kpi-label{font-size:10px;color:var(--text3);margin-bottom:5px;}
+.kpi-value{font-size:20px;font-weight:500;color:var(--navy);line-height:1;}
+.kpi-unit{font-size:11px;font-weight:300;color:var(--text2);margin-left:2px;}
+.kpi-sub{font-size:10px;color:var(--text3);margin-top:3px;}
+.ratio-wrap{margin-top:5px;}
+.ratio-track{height:4px;border-radius:2px;background:var(--surface2);margin-bottom:3px;overflow:hidden;}
+.ratio-fill{height:100%;border-radius:2px;transition:width .4s,background .4s;}
+.ratio-note{font-size:10px;font-weight:500;}
+/* Tabs in main */
+.main-tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:0;}
+.main-tab{padding:8px 14px;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.main-tab.active{color:var(--navy);border-bottom-color:var(--gold);}
+.main-tab:hover:not(.active){color:var(--text2);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+/* Charts */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.chart-title{font-size:12px;font-weight:500;color:var(--navy);margin-bottom:12px;}
+svg text{font-family:'DM Sans',sans-serif;}
+.donut-wrap{display:flex;align-items:center;gap:14px;}
+.donut-legend{display:flex;flex-direction:column;gap:5px;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+/* Scenario compare */
+.sc-compare{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;}
+.sc-compare-title{font-size:12px;font-weight:500;color:var(--navy);margin-bottom:12px;}
+.sc-table{width:100%;border-collapse:collapse;font-size:11px;}
+.sc-table th{text-align:left;padding:6px 8px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:400;}
+.sc-table th:first-child{border-radius:5px 0 0 5px;}
+.sc-table th:last-child{border-radius:0 5px 5px 0;}
+.sc-table td{padding:8px 8px;border-bottom:1px solid var(--border);color:var(--text);}
+.sc-table tr:last-child td{border-bottom:none;}
+.sc-table tr.active-row td{background:rgba(201,150,58,0.05);}
+.tag-active{display:inline-block;font-size:9px;padding:1px 5px;border-radius:999px;background:var(--gold);color:var(--navy);font-weight:500;margin-left:4px;}
+/* Advice */
+.advice{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}
+.adv-item{padding:10px;border-radius:var(--radius-sm);}
+.adv-item.good{background:var(--green-bg);}
+.adv-item.warn{background:var(--amber-bg);}
+.adv-item.bad{background:var(--red-bg);}
+.adv-item.info{background:var(--purple-bg);}
+.adv-icon{font-size:16px;margin-bottom:4px;}
+.adv-title{font-size:11px;font-weight:500;margin-bottom:2px;}
+.adv-item.good .adv-title{color:var(--green);}
+.adv-item.warn .adv-title{color:var(--amber);}
+.adv-item.bad  .adv-title{color:var(--red);}
+.adv-item.info .adv-title{color:var(--purple);}
+.adv-body{font-size:10px;color:var(--text2);line-height:1.5;}
+/* Life events */
+.life-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;}
+.life-title{font-size:12px;font-weight:500;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.btn-add{font-size:11px;padding:4px 12px;border-radius:999px;border:1px solid var(--gold);color:var(--gold);background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.btn-add:hover{background:var(--gold);color:#fff;}
+.event-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.event-item{display:grid;grid-template-columns:90px 130px 110px 110px 28px;gap:8px;align-items:center;background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;font-size:11px;}
+.event-item select,.event-item input[type=number]{font-family:'DM Sans',sans-serif;font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%;}
+.event-label{font-size:10px;color:var(--text3);margin-bottom:2px;}
+.btn-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:0;line-height:1;}
+.btn-del:hover{color:var(--red);}
+.life-chart-wrap{margin-top:10px;}
+/* Region section */
+.region-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;}
+.region-title{font-size:12px;font-weight:500;color:var(--navy);margin-bottom:12px;}
+.region-inputs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+.input-group{display:flex;flex-direction:column;gap:4px;}
+.input-label{font-size:10px;color:var(--text2);}
+.input-group select,.input-group input{font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);}
+.region-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.r-card{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;}
+.r-card-label{font-size:10px;color:var(--text3);margin-bottom:4px;}
+.r-card-val{font-size:14px;font-weight:500;color:var(--navy);}
+.r-card-sub{font-size:10px;color:var(--text2);margin-top:2px;}
+/* Pair info box */
+.pair-info{background:rgba(201,150,58,0.08);border:1px solid rgba(201,150,58,0.3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--amber);line-height:1.6;}
+.pair-info strong{color:var(--amber);}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr;}
+  .sidebar{height:auto;position:static;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .charts-grid{grid-template-columns:1fr;}
+  .advice{grid-template-columns:1fr;}
+  .region-inputs{grid-template-columns:1fr 1fr;}
+  .event-item{grid-template-columns:80px 1fr 1fr 1fr 28px;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div>
+    <div class="logo"><div class="logo-dot"></div>ClaudeHome</div>
+    <div class="logo-sub">住宅ローンシミュレーター v2</div>
+  </div>
+  <div>
+    <div class="sec-label" style="margin-bottom:6px;">シナリオ</div>
+    <div class="sc-tabs">
+      <button class="sc-tab active" onclick="setScenario(0)">A案</button>
+      <button class="sc-tab" onclick="setScenario(1)">B案</button>
+      <button class="sc-tab" onclick="setScenario(2)">C案</button>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <!-- ペアローン toggle -->
+  <div>
+    <div class="sec-label" style="margin-bottom:6px;">ローン形式</div>
+    <div class="toggle-row">
+      <label class="toggle">
+        <input type="checkbox" id="pair-toggle" onchange="togglePair()">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+      <span class="toggle-label">ペアローン（2人で借入）</span>
+    </div>
+  </div>
+  <div class="slider-group">
+    <div class="sec-label">物件・資金</div>
+    <!-- 土地 -->
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">土地価格</span><span class="sl-value" id="v-land">1,500<span>万円</span></span></div>
+      <input type="range" id="sl-land" min="0" max="8000" step="100" value="1500" oninput="update()">
+      <!-- 位置連動ラベル: min=0 max=8000 → marks at 800(10%), 2500(31.25%) -->
+      <svg id="svg-land-ref" width="100%" height="18" style="display:block;overflow:visible;margin-top:2px;">
+        <text id="ref-land-suburb" x="10%" y="13" text-anchor="middle" font-size="9" fill="#E8B84B">郊外 800〜</text>
+        <text id="ref-land-urban"  x="31.25%" y="13" text-anchor="middle" font-size="9" fill="#E8B84B">都市 2,500〜</text>
+      </svg>
+    </div>
+    <!-- 建物 -->
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">建物価格</span><span class="sl-value" id="v-build">2,500<span>万円</span></span></div>
+      <input type="range" id="sl-build" min="500" max="6000" step="100" value="2500" oninput="update()">
+      <!-- 位置連動ラベル: min=500 max=6000 range=5500 → 1200→12.7%, 2000→27.3%, 3500→54.5% -->
+      <svg id="svg-build-ref" width="100%" height="18" style="display:block;overflow:visible;margin-top:2px;">
+        <text id="ref-build-sm"  x="12.7%" y="13" text-anchor="middle" font-size="9" fill="#E8B84B">狭小 1,200〜</text>
+        <text id="ref-build-md"  x="27.3%" y="13" text-anchor="middle" font-size="9" fill="#E8B84B">標準 2,000〜</text>
+        <text id="ref-build-lg"  x="54.5%" y="13" text-anchor="middle" font-size="9" fill="#E8B84B">広め 3,500〜</text>
+      </svg>
+    </div>
+    <!-- 合計 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid rgba(255,255,255,0.08);">
+      <span style="font-size:10px;color:rgba(255,255,255,0.3);">物件合計</span>
+      <span style="font-size:15px;font-weight:500;color:var(--gold2);" id="v-price-total">4,000<span style="font-size:10px;font-weight:300;color:rgba(255,255,255,0.4);margin-left:2px;">万円</span></span>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <!-- ローン条件ブロック：頭金→本人→配偶者 -->
+  <div class="slider-group">
+    <div class="sec-label">頭金</div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">頭金</span><span class="sl-value" id="v-down">800<span>万円</span></span></div>
+      <input type="range" id="sl-down" min="0" max="3000" step="100" value="800" oninput="update()">
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="slider-group">
+    <div class="sec-label">本人分ローン条件</div>
+    <!-- 借入額（自動計算・表示のみ） -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">
+      <span style="font-size:10px;color:rgba(255,255,255,0.45);" id="loan-auto-desc">借入額（物件合計 − 頭金）</span>
+      <span style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.8);" id="v-loan-auto">—<span style="font-size:10px;font-weight:300;color:rgba(255,255,255,0.4);margin-left:2px;">万円</span></span>
+    </div>
+    <div id="pair-check" style="display:none;font-size:9px;padding:4px 0;"></div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">金利（年）</span><span class="sl-value" id="v-rate">1.5<span>%</span></span></div>
+      <input type="range" id="sl-rate" min="0.3" max="5.0" step="0.1" value="1.5" oninput="update()">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">返済期間</span><span class="sl-value" id="v-years">35<span>年</span></span></div>
+      <input type="range" id="sl-years" min="10" max="50" step="1" value="35" oninput="update()">
+      <!-- 位置連動ラベル: min=10 max=50 range=40 → 35年=(35-10)/40=62.5% -->
+      <svg id="svg-years-ref" width="100%" height="18" style="display:block;overflow:visible;margin-top:2px;">
+        <text x="0%"    y="13" text-anchor="start"  font-size="9" fill="rgba(255,255,255,0.3)">10年</text>
+        <text id="ref-yr35" x="62.5%" y="13" text-anchor="middle" font-size="9" fill="#E8B84B">35年</text>
+        <text x="100%"  y="13" text-anchor="end"    font-size="9" fill="rgba(232,184,75,0.45)">50年</text>
+      </svg>
+    </div>
+  </div>
+  <!-- ペアローン追加入力 -->
+  <div class="pair-section" id="pair-section">
+    <div class="divider" style="margin-bottom:12px;"></div>
+    <div class="sec-label">配偶者分ローン条件</div>
+    <div class="pair-note">⚠ ペアローンは2本の独立した契約です。片方が返済不能になった場合、もう一方に残債が残ります。</div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">配偶者 借入額</span><span class="sl-value" id="v-pair-loan">1,000<span>万円</span></span></div>
+      <input type="range" id="sl-pair-loan" min="500" max="5000" step="100" value="1000" oninput="update()">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">配偶者 金利</span><span class="sl-value" id="v-pair-rate">1.5<span>%</span></span></div>
+      <input type="range" id="sl-pair-rate" min="0.3" max="5.0" step="0.1" value="1.5" oninput="update()">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">配偶者 返済期間</span><span class="sl-value" id="v-pair-years">35<span>年</span></span></div>
+      <input type="range" id="sl-pair-years" min="10" max="50" step="1" value="35" oninput="update()">
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="slider-group">
+    <div class="sec-label">家計（現在）</div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">世帯月収（手取り）</span><span class="sl-value" id="v-income">50<span>万円</span></span></div>
+      <input type="range" id="sl-income" min="20" max="150" step="1" value="50" oninput="update()">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">毎月の生活費</span><span class="sl-value" id="v-living">25<span>万円</span></span></div>
+      <input type="range" id="sl-living" min="10" max="60" step="1" value="25" oninput="update()">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-label">繰り上げ返済（万円/年）</span><span class="sl-value" id="v-extra">0<span>万円</span></span></div>
+      <input type="range" id="sl-extra" min="0" max="100" step="5" value="0" oninput="update()">
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+  <div class="page-title">ローン返済シミュレーション</div>
+  <p class="page-sub">スライダーを動かすとすべての数値がリアルタイムで更新されます</p>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi k-blue">
+      <div class="kpi-label">月々の返済額</div>
+      <div><span class="kpi-value" id="k-monthly">—</span><span class="kpi-unit">万円</span></div>
+      <div class="kpi-sub" id="k-monthly-sub">—</div>
+    </div>
+    <div class="kpi k-ratio">
+      <div class="kpi-label">返済負担率</div>
+      <div><span class="kpi-value" id="k-ratio">—</span><span class="kpi-unit">%</span></div>
+      <div class="ratio-wrap">
+        <div class="ratio-track"><div class="ratio-fill" id="ratio-fill"></div></div>
+        <div class="ratio-note" id="ratio-note"></div>
+      </div>
+    </div>
+    <div class="kpi k-gold">
+      <div class="kpi-label">総支払額（利息込み）</div>
+      <div><span class="kpi-value" id="k-total">—</span><span class="kpi-unit">万円</span></div>
+      <div class="kpi-sub" id="k-interest">利息 — 万円</div>
+    </div>
+    <div class="kpi k-green">
+      <div class="kpi-label">月々の手残り</div>
+      <div><span class="kpi-value" id="k-surplus">—</span><span class="kpi-unit">万円</span></div>
+      <div class="kpi-sub" id="k-surplus-sub">—</div>
+    </div>
+  </div>
+
+  <!-- Main tabs -->
+  <div class="main-tabs">
+    <div class="main-tab active" onclick="switchTab('charts')">返済グラフ</div>
+    <div class="main-tab" onclick="switchTab('life')">ライフイベント</div>
+    <div class="main-tab" onclick="switchTab('region')">地域・市況</div>
+    <div class="main-tab" onclick="switchTab('compare')">シナリオ比較</div>
+  </div>
+
+  <!-- TAB: charts -->
+  <div class="tab-pane active" id="pane-charts">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">残債推移（繰り上げ返済の効果）</div>
+        <svg id="svg-balance" width="100%" viewBox="0 0 340 180" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">支払い内訳（元金 vs 利息）</div>
+        <div class="donut-wrap">
+          <svg id="svg-donut" width="120" height="120" viewBox="0 0 130 130"></svg>
+          <div class="donut-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#1A2340;"></div><span>元金 <strong id="d-principal">—</strong> 万円</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#C9963A;"></div><span>利息 <strong id="d-interest">—</strong> 万円</span></div>
+            <div style="margin-top:6px;font-size:10px;color:var(--text3);">総支払</div>
+            <div style="font-size:15px;font-weight:500;color:var(--navy);" id="d-total">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="advice" id="advice-box"></div>
+    <!-- ペアローン詳細（表示時のみ） -->
+    <div id="pair-detail" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:500;color:var(--navy);margin-bottom:10px;">ペアローン内訳</div>
+      <div class="pair-info">⚠ <strong>リスク注意：</strong>ペアローンは2本の独立した契約です。離婚・死亡・収入減などで片方が返済不能になった場合でも、もう一方のローンは残ります。団信（団体信用生命保険）の加入は各自で行う必要があります。</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="pair-cards"></div>
+    </div>
+  </div>
+
+  <!-- TAB: life events -->
+  <div class="tab-pane" id="pane-life">
+    <div class="life-section">
+      <div class="life-title">
+        ライフイベント設定
+        <button class="btn-add" onclick="addEvent()">＋ イベントを追加</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
+        転職・出産・子どもの入学・定年など、将来の収支変動をイベントとして登録すると、30年間の手残り推移グラフに反映されます。
+      </div>
+      <div style="display:grid;grid-template-columns:90px 130px 110px 110px 28px;gap:8px;padding:0 10px;margin-bottom:4px;">
+        <div style="font-size:10px;color:var(--text3);">発生時期</div>
+        <div style="font-size:10px;color:var(--text3);">イベント種別</div>
+        <div style="font-size:10px;color:var(--text3);">月収の変化</div>
+        <div style="font-size:10px;color:var(--text3);">生活費の変化</div>
+        <div></div>
+      </div>
+      <div class="event-list" id="event-list"></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;">※ 変化は「現在の値からの差分（万円）」で入力。増加は正、減少は負。</div>
+    </div>
+    <div class="chart-card" style="margin-bottom:20px;">
+      <div class="chart-title">30年間 月手残り推移（ライフイベント反映）</div>
+      <svg id="svg-life" width="100%" viewBox="0 0 680 200" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="advice" id="life-advice"></div>
+  </div>
+
+  <!-- TAB: region -->
+  <div class="tab-pane" id="pane-region">
+    <div class="region-section">
+      <div class="region-title">建設予定地の入力</div>
+      <div class="region-inputs">
+        <div class="input-group">
+          <div class="input-label">都道府県</div>
+          <select id="sel-pref" onchange="onPrefChange()">
+            <option value="">選択してください</option>
+            <option value="tokyo">東京都</option>
+            <option value="kanagawa">神奈川県</option>
+            <option value="osaka">大阪府</option>
+            <option value="aichi" selected>愛知県</option>
+            <option value="fukuoka">福岡県</option>
+            <option value="sapporo">北海道</option>
+            <option value="other">その他（地方）</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <div class="input-label">市区町村 <span style="color:var(--color-text-danger);font-size:10px;">必須</span></div>
+          <select id="sel-city" onchange="updateRegion()">
+            <option value="">都道府県を先に選択</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <div class="input-label">敷地面積（㎡）</div>
+          <input type="number" id="inp-area" placeholder="例：100" value="100" min="30" max="300" oninput="updateRegion()">
+        </div>
+      </div>
+      <div class="region-summary" id="region-summary"></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">
+        ※ 参照値は国土交通省 地価公示データ（2024年）および建築費用統計をもとにした概算値です。実際の取得費用はエリア・工法・仕様により異なります。
+        <span style="color:var(--gold);cursor:pointer;" onclick="alert('Bubble本番環境では国土交通省 不動産情報ライブラリAPI（無料）を使って自動更新する予定です。')"> 本番では自動更新予定</span>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:20px;">
+      <div class="chart-title" id="region-chart-title">地価推移（過去5年 概算・参照値）</div>
+      <svg id="svg-region" width="100%" viewBox="0 0 680 200" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+
+  <!-- TAB: compare -->
+  <div class="tab-pane" id="pane-compare">
+    <div class="sc-compare">
+      <div class="sc-compare-title">シナリオ比較（A案 / B案 / C案）</div>
+      <div style="overflow-x:auto;">
+        <table class="sc-table">
+          <thead>
+            <tr>
+              <th>案</th><th>土地</th><th>建物</th><th>頭金</th>
+              <th>金利</th><th>期間</th><th>月返済</th><th>負担率</th><th>総支払</th><th>手残り</th>
+            </tr>
+          </thead>
+          <tbody id="sc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="advice" id="compare-advice" style="grid-template-columns:1fr 1fr;"></div>
+  </div>
+</main>
+</div>
+
+<script>
+// ── State ──
+let currentScenario = 0;
+let isPair = false;
+let lifeEvents = [];
+let eventId = 0;
+
+const scenarios = [
+  {land:1500,build:2500,down:800,rate:1.5,years:35,income:50,living:25,extra:0,pairLoan:1000,pairRate:1.5,pairYears:35},
+  {land:1500,build:2500,down:800,rate:1.5,years:35,income:50,living:25,extra:0,pairLoan:1000,pairRate:1.5,pairYears:35},
+  {land:1500,build:2500,down:800,rate:1.5,years:35,income:50,living:25,extra:0,pairLoan:1000,pairRate:1.5,pairYears:35},
+];
+
+// Reference data
+// 市区町村マスタ（都道府県 → 市区町村リスト）
+const CITY_MAP = {
+  tokyo:    ['千代田区','中央区','港区','新宿区','渋谷区','品川区','世田谷区','杉並区','練馬区','足立区','その他23区','八王子市','立川市'],
+  kanagawa: ['横浜市中区','横浜市青葉区','横浜市都筑区','川崎市','相模原市','藤沢市','横須賀市'],
+  osaka:    ['大阪市中央区','大阪市北区','大阪市天王寺区','大阪市住吉区','堺市','豊中市','吹田市','枚方市'],
+  aichi:    ['名古屋市中区','名古屋市東区','名古屋市千種区','名古屋市昭和区','名古屋市天白区','名古屋市緑区','名古屋市守山区','春日井市','長久手市','日進市','豊田市','岡崎市','刈谷市','豊橋市','一宮市'],
+  fukuoka:  ['福岡市中央区','福岡市博多区','福岡市早良区','福岡市東区','北九州市','久留米市'],
+  sapporo:  ['札幌市中央区','札幌市北区','札幌市白石区','札幌市豊平区','旭川市','函館市'],
+  other:    ['市区町村A','市区町村B','市区町村C'],
+};
+
+// 市区町村別 坪単価（万円/坪）概算・過去5年推移
+// 出典：国交省地価公示データ（2020-2024年）概算値
+const CITY_DATA = {
+  // 東京
+  '千代田区':   {tsubo:[380,395,410,430,455], build:120},
+  '中央区':     {tsubo:[280,292,305,318,335], build:115},
+  '港区':       {tsubo:[350,362,378,395,418], build:118},
+  '新宿区':     {tsubo:[180,188,196,205,215], build:110},
+  '渋谷区':     {tsubo:[220,230,242,256,270], build:115},
+  '品川区':     {tsubo:[150,157,165,173,182], build:105},
+  '世田谷区':   {tsubo:[110,115,120,126,132], build:100},
+  '杉並区':     {tsubo:[90,94,98,103,108],   build:98},
+  '練馬区':     {tsubo:[72,75,78,82,86],     build:96},
+  '足立区':     {tsubo:[55,57,60,63,66],     build:93},
+  'その他23区': {tsubo:[80,83,87,91,96],     build:97},
+  '八王子市':   {tsubo:[28,29,30,31,32],     build:88},
+  '立川市':     {tsubo:[45,47,49,51,53],     build:92},
+  // 神奈川
+  '横浜市中区': {tsubo:[95,99,103,108,114],  build:100},
+  '横浜市青葉区':{tsubo:[70,72,75,78,81],   build:97},
+  '横浜市都筑区':{tsubo:[60,62,65,67,70],   build:96},
+  '川崎市':     {tsubo:[80,83,87,91,96],     build:98},
+  '相模原市':   {tsubo:[30,31,32,33,34],     build:88},
+  '藤沢市':     {tsubo:[45,47,49,51,53],     build:92},
+  '横須賀市':   {tsubo:[25,26,27,28,29],     build:87},
+  // 大阪
+  '大阪市中央区':{tsubo:[150,158,167,177,188], build:108},
+  '大阪市北区': {tsubo:[180,190,200,212,225], build:110},
+  '大阪市天王寺区':{tsubo:[80,84,89,94,99], build:100},
+  '大阪市住吉区':{tsubo:[40,42,44,46,48],   build:92},
+  '堺市':       {tsubo:[25,26,27,28,29],     build:87},
+  '豊中市':     {tsubo:[55,57,60,63,66],     build:93},
+  '吹田市':     {tsubo:[60,63,66,69,73],     build:94},
+  '枚方市':     {tsubo:[30,31,32,34,35],     build:88},
+  // 愛知
+  '名古屋市中区':{tsubo:[100,104,108,113,118], build:102},
+  '名古屋市東区':{tsubo:[75,78,81,84,88],   build:98},
+  '名古屋市千種区':{tsubo:[65,68,71,74,77], build:96},
+  '名古屋市昭和区':{tsubo:[60,62,65,68,71], build:96},
+  '名古屋市天白区':{tsubo:[38,39,41,43,45], build:90},
+  '名古屋市緑区': {tsubo:[32,33,34,36,37],  build:89},
+  '名古屋市守山区':{tsubo:[28,29,30,31,32], build:88},
+  '春日井市':   {tsubo:[22,23,24,25,26],     build:86},
+  '長久手市':   {tsubo:[35,36,38,39,41],     build:90},
+  '日進市':     {tsubo:[30,31,32,33,35],     build:89},
+  '豊田市':     {tsubo:[20,21,22,23,24],     build:85},
+  '岡崎市':     {tsubo:[18,19,20,21,22],     build:84},
+  '刈谷市':     {tsubo:[22,23,24,25,26],     build:86},
+  '豊橋市':     {tsubo:[14,14,15,15,16],     build:82},
+  '一宮市':     {tsubo:[12,13,13,14,14],     build:81},
+  // 福岡
+  '福岡市中央区':{tsubo:[90,95,101,108,115], build:100},
+  '福岡市博多区':{tsubo:[65,68,72,77,82],   build:96},
+  '福岡市早良区':{tsubo:[35,37,39,41,43],   build:90},
+  '福岡市東区': {tsubo:[40,42,44,47,49],    build:91},
+  '北九州市':   {tsubo:[15,15,16,16,17],     build:82},
+  '久留米市':   {tsubo:[12,12,13,13,14],     build:80},
+  // 北海道
+  '札幌市中央区':{tsubo:[35,37,40,43,46],   build:90},
+  '札幌市北区': {tsubo:[18,19,20,22,23],     build:84},
+  '札幌市白石区':{tsubo:[15,16,17,18,19],   build:82},
+  '札幌市豊平区':{tsubo:[18,19,20,21,22],   build:84},
+  '旭川市':     {tsubo:[6,6,7,7,7],          build:72},
+  '函館市':     {tsubo:[5,5,5,6,6],          build:70},
+  // other
+  '市区町村A':  {tsubo:[8,8,8,9,9],          build:68},
+  '市区町村B':  {tsubo:[6,6,6,7,7],          build:65},
+  '市区町村C':  {tsubo:[5,5,5,5,6],          build:63},
+};
+
+const REGION_DATA = {
+  tokyo:    {name:'東京都',    buildBase:110},
+  kanagawa: {name:'神奈川県',  buildBase:98},
+  osaka:    {name:'大阪府',    buildBase:100},
+  aichi:    {name:'愛知県',    buildBase:90},
+  fukuoka:  {name:'福岡県',    buildBase:92},
+  sapporo:  {name:'北海道',    buildBase:80},
+  other:    {name:'その他',    buildBase:70},
+};
+
+const EVENT_TYPES = [
+  {val:'転職・昇給',   incDelta:5,  livDelta:0},
+  {val:'収入減・転職', incDelta:-5, livDelta:0},
+  {val:'子ども誕生',   incDelta:-3, livDelta:3},
+  {val:'子ども入学',   incDelta:0,  livDelta:2},
+  {val:'子ども独立',   incDelta:0,  livDelta:-3},
+  {val:'定年退職',     incDelta:-20,livDelta:-5},
+  {val:'配偶者就労',   incDelta:10, livDelta:0},
+  {val:'カスタム',     incDelta:0,  livDelta:0},
+];
+
+// ── Helpers ──
+const fmt  = n => Math.round(n).toLocaleString();
+const f1   = n => (Math.round(n*10)/10).toFixed(1);
+const fmtM = n => n >= 0 ? '+' + f1(n) : f1(n);
+
+function calcMonthly(loanMan, rate, years) {
+  const r = rate / 100 / 12, n = years * 12;
+  if (r === 0) return loanMan / n;
+  return loanMan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1);
+}
+
+// ── Tab ──
+function switchTab(id) {
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.toggle('active', t.onclick.toString().includes("'"+id+"'")));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-'+id).classList.add('active');
+}
+
+// ── Scenario ──
+function setScenario(idx) {
+  currentScenario = idx;
+  document.querySelectorAll('.sc-tab').forEach((b,i) => b.classList.toggle('active', i===idx));
+  const s = scenarios[idx];
+  document.getElementById('sl-land').value      = s.land;
+  document.getElementById('sl-build').value     = s.build;
+  document.getElementById('sl-down').value      = s.down;
+  document.getElementById('sl-rate').value      = s.rate;
+  document.getElementById('sl-years').value     = s.years;
+  document.getElementById('sl-income').value    = s.income;
+  document.getElementById('sl-living').value    = s.living;
+  document.getElementById('sl-extra').value     = s.extra;
+  document.getElementById('sl-pair-loan').value = s.pairLoan;
+  document.getElementById('sl-pair-rate').value = s.pairRate;
+  document.getElementById('sl-pair-years').value= s.pairYears;
+  update();
+}
+
+// ── Pair toggle ──
+function togglePair() {
+  isPair = document.getElementById('pair-toggle').checked;
+  document.getElementById('pair-section').classList.toggle('show', isPair);
+  document.getElementById('pair-detail').style.display = isPair ? 'block' : 'none';
+  update();
+}
+
+// ── Main update ──
+function update() {
+  const land     = +document.getElementById('sl-land').value;
+  const build    = +document.getElementById('sl-build').value;
+  const price    = land + build;
+  const down     = +document.getElementById('sl-down').value;
+  const rate     = +document.getElementById('sl-rate').value;
+  const years    = +document.getElementById('sl-years').value;
+  const income   = +document.getElementById('sl-income').value;
+  const living   = +document.getElementById('sl-living').value;
+  const extra    = +document.getElementById('sl-extra').value;
+  const pairLoan = +document.getElementById('sl-pair-loan').value;
+  const pairRate = +document.getElementById('sl-pair-rate').value;
+  const pairYears= +document.getElementById('sl-pair-years').value;
+
+  scenarios[currentScenario] = {land,build,down,rate,years,income,living,extra,pairLoan,pairRate,pairYears};
+
+  // 借入額（自動計算）ペアローン時は配偶者分を差し引く
+  const loanAuto = isPair ? price - down - pairLoan : price - down;
+  document.getElementById('v-loan-auto').innerHTML = fmt(Math.max(0, loanAuto)) + '<span style="font-size:10px;font-weight:300;color:rgba(255,255,255,0.4);margin-left:2px;">万円</span>';
+
+  // 借入額ラベルの説明文と検証メッセージ
+  const loanDescEl = document.getElementById('loan-auto-desc');
+  if (loanDescEl) loanDescEl.textContent = isPair ? '本人借入額（物件合計 − 頭金 − 配偶者借入額）' : '借入額（物件合計 − 頭金）';
+  const checkEl = document.getElementById('pair-check');
+  if (checkEl) {
+    if (isPair) {
+      checkEl.style.display = 'block';
+      if (loanAuto < 0) {
+        checkEl.style.color = 'rgba(255,120,100,0.9)';
+        checkEl.textContent = '⚠ 配偶者借入額が大きすぎます（本人分がマイナス）';
+      } else {
+        checkEl.style.color = 'rgba(100,220,140,0.8)';
+        checkEl.textContent = '✓ 頭金 ' + fmt(down) + ' + 本人 ' + fmt(loanAuto) + ' + 配偶者 ' + fmt(pairLoan) + ' = ' + fmt(price) + ' 万円';
+      }
+    } else {
+      checkEl.style.display = 'none';
+    }
+  }
+
+  // Sidebar values
+  document.getElementById('v-land').innerHTML        = fmt(land)   + '<span>万円</span>';
+  document.getElementById('v-build').innerHTML       = fmt(build)  + '<span>万円</span>';
+  document.getElementById('v-price-total').innerHTML = fmt(price)  + '<span style="font-size:10px;font-weight:300;color:rgba(255,255,255,0.4);margin-left:2px;">万円</span>';
+  document.getElementById('v-down').innerHTML        = fmt(down)   + '<span>万円</span>';
+  document.getElementById('v-rate').innerHTML        = f1(rate)    + '<span>%</span>';
+  document.getElementById('v-years').innerHTML       = years       + '<span>年</span>';
+  document.getElementById('v-income').innerHTML      = income      + '<span>万円</span>';
+  document.getElementById('v-living').innerHTML      = living      + '<span>万円</span>';
+  document.getElementById('v-extra').innerHTML       = extra       + '<span>万円</span>';
+  document.getElementById('v-pair-loan').innerHTML   = fmt(pairLoan)  + '<span>万円</span>';
+  document.getElementById('v-pair-rate').innerHTML   = f1(pairRate)   + '<span>%</span>';
+  document.getElementById('v-pair-years').innerHTML  = pairYears      + '<span>年</span>';
+
+  const loan    = isPair ? Math.max(0, price - down - pairLoan) : price - down;
+  const monthly1 = calcMonthly(loan, rate, years);
+  const pMonthly = isPair ? calcMonthly(pairLoan, pairRate, pairYears) : 0;
+  const monthly  = monthly1 + pMonthly;
+
+  const total1    = monthly1 * years * 12;
+  const pTotal    = isPair ? pMonthly * pairYears * 12 : 0;
+  const total     = total1 + pTotal;
+  const interest  = total - loan - (isPair ? pairLoan : 0);
+  const ratio     = monthly / income * 100;
+  const surplus   = income - monthly - living;
+
+  // KPIs
+  document.getElementById('k-monthly').textContent     = f1(monthly);
+  document.getElementById('k-monthly-sub').textContent = isPair
+    ? `本人 ${f1(monthly1)} + 配偶者 ${f1(pMonthly)} 万円`
+    : `借入 ${fmt(loan)} 万（土地 ${fmt(land)} + 建物 ${fmt(build)}）`;
+  document.getElementById('k-ratio').textContent       = f1(ratio);
+  document.getElementById('k-total').textContent       = fmt(Math.round(total));
+  document.getElementById('k-interest').textContent    = '利息計 ' + fmt(Math.round(interest)) + ' 万円';
+  document.getElementById('k-surplus').textContent     = f1(surplus);
+  document.getElementById('k-surplus-sub').textContent = `${income} − ${f1(monthly)} − ${living} 万円`;
+
+  const rFill = document.getElementById('ratio-fill');
+  const rNote = document.getElementById('ratio-note');
+  const pct = Math.min(ratio / 40 * 100, 100);
+  rFill.style.width = pct + '%';
+  if (ratio <= 20) { rFill.style.background='#2A7A4B'; rNote.style.color='#2A7A4B'; rNote.textContent='✓ 理想的（20%以下）'; }
+  else if(ratio<=25){ rFill.style.background='#B8620A'; rNote.style.color='#B8620A'; rNote.textContent='△ 許容範囲（25%以下）'; }
+  else              { rFill.style.background='#C02B2B'; rNote.style.color='#C02B2B'; rNote.textContent='⚠ 要注意（25%超）'; }
+
+  drawBalance(loan, rate, years, extra);
+  drawDonut(loan + (isPair?pairLoan:0), Math.round(interest));
+  drawAdvice(ratio, surplus, interest, loan + (isPair?pairLoan:0), extra, 'advice-box');
+  drawScenarioTable();
+  drawCompareAdvice();
+
+  // Pair detail
+  if (isPair) {
+    const pc = document.getElementById('pair-cards');
+    const mkCard = (label, loanAmt, r, y, m) => {
+      const tot = m * y * 12;
+      const int = tot - loanAmt;
+      return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;">
+        <div style="font-size:11px;font-weight:500;color:var(--navy);margin-bottom:8px;">${label}</div>
+        <div style="font-size:10px;color:var(--text3);">借入額</div><div style="font-size:14px;font-weight:500;">${fmt(loanAmt)} 万円</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--text3);">月返済</div><div style="font-size:14px;font-weight:500;">${f1(m)} 万円</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--text3);">総利息</div><div style="font-size:13px;color:var(--amber);">${fmt(Math.round(int))} 万円</div>
+      </div>`;
+    };
+    pc.innerHTML =
+      mkCard('本人ローン', loan, rate, years, monthly1) +
+      mkCard('配偶者ローン', pairLoan, pairRate, pairYears, pMonthly);
+  }
+
+  drawLifeChart(income, living, monthly, surplus);
+  updateRegion();
+}
+
+// ── Balance chart ──
+function drawBalance(loan, rate, years, extra) {
+  const svg=document.getElementById('svg-balance');
+  const W=340,H=190,PL=40,PR=12,PT=10,PB=32;
+  const cW=W-PL-PR, cH=H-PT-PB;
+  const startYear = new Date().getFullYear() + 1;
+
+  const buildPts = (ex) => {
+    const r=rate/100/12, m=calcMonthly(loan,rate,years);
+    let bal=loan; const pts=[loan];
+    for(let yr=1;yr<=years;yr++){
+      for(let mo=0;mo<12;mo++){const i=bal*r;bal=Math.max(0,bal-(m-i));}
+      bal=Math.max(0,bal-ex);
+      pts.push(bal);
+      if(bal<=0){for(let j=yr+1;j<=years;j++)pts.push(0);break;}
+    }
+    return pts;
+  };
+  const base=buildPts(0), withEx=buildPts(extra);
+  const maxV=loan;
+  const xS=i=>PL+i/years*cW, yS=v=>PT+(1-v/maxV)*cH;
+  const toP=pts=>pts.map((v,i)=>(i===0?'M':'L')+xS(i).toFixed(1)+','+yS(v).toFixed(1)).join(' ');
+  const finYr=withEx.findIndex(v=>v<=0);
+  const monthly=calcMonthly(loan,rate,years);
+  const totalPay=monthly*years*12;
+  const totalInt=totalPay-loan;
+
+  let h='';
+  for(let i=0;i<=4;i++){
+    const y=PT+i/4*cH, v=Math.round(maxV*(1-i/4));
+    h+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#E8E4DC" stroke-width="1"/>`;
+    h+=`<text x="${PL-4}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#9AA0AE">${fmt(v)}</text>`;
+  }
+  for(let i=0;i<=5;i++){
+    const xi=Math.round(i/5*years), x=xS(xi);
+    h+=`<text x="${x.toFixed(1)}" y="${H-14}" text-anchor="middle" font-size="8" fill="#9AA0AE">${startYear+xi}年</text>`;
+  }
+  h+=`<path d="${toP(base)} L${xS(base.length-1).toFixed(1)},${(PT+cH).toFixed(1)} L${PL},${(PT+cH).toFixed(1)} Z" fill="rgba(44,59,96,0.07)"/>`;
+  h+=`<path d="${toP(base)}" fill="none" stroke="#2C3B60" stroke-width="1.8"/>`;
+  if(extra>0){
+    h+=`<path d="${toP(withEx)}" fill="none" stroke="#C9963A" stroke-width="2" stroke-dasharray="5,3"/>`;
+    if(finYr>0){
+      const fx=xS(finYr);
+      h+=`<line x1="${fx}" y1="${PT}" x2="${fx}" y2="${PT+cH}" stroke="#C9963A" stroke-width="1" stroke-dasharray="3,3"/>`;
+      h+=`<text x="${(fx+3).toFixed(1)}" y="${(PT+13).toFixed(1)}" font-size="8" fill="#C9963A">${startYear+finYr}年完済</text>`;
+    }
+  }
+  if(years>35){
+    const x35=xS(35);
+    h+=`<line x1="${x35}" y1="${PT}" x2="${x35}" y2="${PT+cH}" stroke="rgba(201,150,58,0.35)" stroke-width="1" stroke-dasharray="4,3"/>`;
+    h+=`<text x="${(x35+2).toFixed(1)}" y="${(PT+21).toFixed(1)}" font-size="8" fill="#C9963A">${startYear+35}(35年)</text>`;
+  }
+  h+=`<rect x="${PL}" y="${PT}" width="8" height="8" fill="#2C3B60" rx="2"/>`;
+  h+=`<text x="${PL+11}" y="${PT+7}" font-size="9" fill="#5A6478">返済残高</text>`;
+  if(extra>0){
+    h+=`<rect x="${PL+65}" y="${PT}" width="8" height="8" fill="#C9963A" rx="2"/>`;
+    h+=`<text x="${PL+76}" y="${PT+7}" font-size="9" fill="#5A6478">繰上げあり</text>`;
+  }
+  h+=`<text x="${PL}" y="${H-2}" font-size="8" fill="#9AA0AE">月返済 ${f1(monthly)}万円 / 総支払 ${fmt(Math.round(totalPay))}万円 / 総利息 ${fmt(Math.round(totalInt))}万円</text>`;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML=h;
+}
+// ── Donut ──
+function drawDonut(principal, interest) {
+  const total=principal+interest;
+  const r=44,cx=65,cy=65,sw=18;
+  const pA=principal/total*2*Math.PI;
+  const x1=cx+r*Math.sin(pA), y1=cy-r*Math.cos(pA);
+  const lg=pA>Math.PI?1:0;
+  document.getElementById('d-principal').textContent=fmt(principal);
+  document.getElementById('d-interest').textContent=fmt(interest);
+  document.getElementById('d-total').textContent=fmt(total)+' 万円';
+  document.getElementById('svg-donut').innerHTML=
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1A2340" stroke-width="${sw}"/>` +
+    `<path d="M${cx},${cy-r} A${r},${r} 0 ${lg},1 ${x1.toFixed(2)},${y1.toFixed(2)}" fill="none" stroke="#C9963A" stroke-width="${sw}"/>` +
+    `<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="10" fill="#5A6478">利息率</text>` +
+    `<text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="14" font-weight="500" fill="#1A2340">${Math.round(interest/total*100)}%</text>`;
+}
+
+// ── Advice ──
+function drawAdvice(ratio, surplus, interest, loan, extra, targetId) {
+  const items=[];
+  if(ratio<=20) items.push({cls:'good',icon:'✅',title:'返済負担率は理想的',body:`${f1(ratio)}% は余裕ある水準。急な出費にも対応できます。`});
+  else if(ratio<=25) items.push({cls:'warn',icon:'⚠️',title:'返済負担率に注意',body:`${f1(ratio)}% は許容範囲ですが、教育費ピーク時は家計が厳しくなる可能性があります。`});
+  else items.push({cls:'bad',icon:'🚨',title:'返済負担率が高すぎます',body:`${f1(ratio)}% は危険水域。頭金増額・物件価格・期間の見直しを推奨します。`});
+  if(surplus>=10) items.push({cls:'good',icon:'💰',title:'月の手残りは十分',body:`月 ${f1(surplus)} 万円の余裕。教育費・老後資金の積み立てに充てましょう。`});
+  else if(surplus>=5) items.push({cls:'warn',icon:'📊',title:'手残りがやや少ない',body:`月 ${f1(surplus)} 万円。緊急資金（生活費6ヶ月分）の確保を優先してください。`});
+  else items.push({cls:'bad',icon:'📉',title:'手残りが不足',body:`月 ${f1(surplus)} 万円では想定外の出費に対応できません。条件を再検討してください。`});
+  const iRate=Math.round(interest/loan*100);
+  if(extra>0) items.push({cls:'good',icon:'🏃',title:'繰り上げ返済で利息削減',body:`年 ${extra} 万円の繰り上げで完済時期が短縮されます。グラフで確認してください。`});
+  else if(iRate>30) items.push({cls:'warn',icon:'💡',title:'繰り上げ返済を検討',body:`利息が元金の ${iRate}% に達しています。余裕ができたら繰り上げ返済を試してみてください。`});
+  else items.push({cls:'good',icon:'📈',title:'低金利の恩恵を享受中',body:`総利息は比較的抑えられています。固定・変動の選択も今後検討しましょう。`});
+  document.getElementById(targetId).innerHTML=items.map(it=>
+    `<div class="adv-item ${it.cls}"><div class="adv-icon">${it.icon}</div><div class="adv-title">${it.title}</div><div class="adv-body">${it.body}</div></div>`
+  ).join('');
+}
+
+// ── Scenario table ──
+function drawScenarioTable() {
+  const tbody=document.getElementById('sc-tbody');
+  const names=['A案','B案','C案'];
+  tbody.innerHTML=scenarios.map((s,i)=>{
+    const price=s.land+s.build, loan=price-s.down;
+    const m=calcMonthly(loan,s.rate,s.years)+(isPair?calcMonthly(s.pairLoan,s.pairRate,s.pairYears):0);
+    const total=m*s.years*12;
+    const ratio=m/s.income*100;
+    const surplus=s.income-m-s.living;
+    const isA=i===currentScenario;
+    return `<tr class="${isA?'active-row':''}">
+      <td>${names[i]}${isA?'<span class="tag-active">現在</span>':''}</td>
+      <td>${fmt(s.land)}万</td><td>${fmt(s.build)}万</td><td>${fmt(s.down)}万</td>
+      <td>${f1(s.rate)}%</td><td>${s.years}年</td>
+      <td>${f1(m)}万</td><td>${f1(ratio)}%</td>
+      <td>${fmt(Math.round(total))}万</td>
+      <td style="color:${surplus>=5?'var(--green)':surplus>=0?'var(--amber)':'var(--red)'}">${f1(surplus)}万</td>
+    </tr>`;
+  }).join('');
+}
+
+function drawCompareAdvice() {
+  const items=[];
+  const best=scenarios.reduce((a,b,i)=>{
+    const lA=(a.land+a.build-a.down), lB=(b.land+b.build-b.down);
+    const mA=calcMonthly(lA,a.rate,a.years)/a.income;
+    const mB=calcMonthly(lB,b.rate,b.years)/b.income;
+    return mA<=mB?a:b;
+  });
+  const names=['A案','B案','C案'];
+  const bestIdx=scenarios.indexOf(best);
+  items.push({cls:'info',icon:'🏆',title:`${names[bestIdx]} が最も返済負担が低い`,body:`3つのシナリオ中、返済負担率が最も低いのは ${names[bestIdx]} です。`});
+  const maxSurplus=scenarios.reduce((a,b)=>{
+    const lA=(a.land+a.build-a.down),lB=(b.land+b.build-b.down);
+    const mA=calcMonthly(lA,a.rate,a.years),mB=calcMonthly(lB,b.rate,b.years);
+    return (a.income-mA-a.living)>=(b.income-mB-b.living)?a:b;
+  });
+  const msIdx=scenarios.indexOf(maxSurplus);
+  items.push({cls:'good',icon:'💰',title:`${names[msIdx]} が月手残り最大`,body:`毎月の生活余裕が最も大きいのは ${names[msIdx]} です。スライダーを切り替えて比較してみてください。`});
+  document.getElementById('compare-advice').innerHTML=items.map(it=>
+    `<div class="adv-item ${it.cls}"><div class="adv-icon">${it.icon}</div><div class="adv-title">${it.title}</div><div class="adv-body">${it.body}</div></div>`
+  ).join('');
+}
+
+// ── Life Events ──
+function addEvent() {
+  const id = ++eventId;
+  lifeEvents.push({id, year:5, type:'子ども誕生', incDelta:-3, livDelta:3});
+  renderEvents();
+  drawLifeChart(
+    +document.getElementById('sl-income').value,
+    +document.getElementById('sl-living').value,
+    calcMonthly(
+      +document.getElementById('sl-land').value + +document.getElementById('sl-build').value - +document.getElementById('sl-down').value,
+      +document.getElementById('sl-rate').value,
+      +document.getElementById('sl-years').value
+    ) + (isPair ? calcMonthly(+document.getElementById('sl-pair-loan').value, +document.getElementById('sl-pair-rate').value, +document.getElementById('sl-pair-years').value) : 0),
+    0
+  );
+}
+
+function removeEvent(id) {
+  lifeEvents = lifeEvents.filter(e => e.id !== id);
+  renderEvents();
+  update();
+}
+
+function renderEvents() {
+  const list = document.getElementById('event-list');
+  if (lifeEvents.length === 0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px 0;">イベントが未登録です。「＋ イベントを追加」から登録してください。</div>';
+    return;
+  }
+  list.innerHTML = lifeEvents.map(e => {
+    const opts = EVENT_TYPES.map(t => `<option value="${t.val}" ${e.type===t.val?'selected':''}>${t.val}</option>`).join('');
+    return `<div class="event-item" id="ev-${e.id}">
+      <div>
+        <div class="event-label">発生時期</div>
+        <select onchange="evUpdate(${e.id},'year',this.value)">
+          ${[1,2,3,5,7,10,15,20,25,30].map(y=>`<option value="${y}" ${e.year===y?'selected':''}>${y}年後</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <div class="event-label">種別</div>
+        <select onchange="evType(${e.id},this.value)">${opts}</select>
+      </div>
+      <div>
+        <div class="event-label">月収の変化（万円）</div>
+        <input type="number" value="${e.incDelta}" step="1" onchange="evUpdate(${e.id},'incDelta',this.value)">
+      </div>
+      <div>
+        <div class="event-label">生活費の変化（万円）</div>
+        <input type="number" value="${e.livDelta}" step="1" onchange="evUpdate(${e.id},'livDelta',this.value)">
+      </div>
+      <button class="btn-del" onclick="removeEvent(${e.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function evUpdate(id, key, val) {
+  const e = lifeEvents.find(e => e.id === id);
+  if (e) { e[key] = key==='year' ? +val : +val; update(); }
+}
+
+function evType(id, typeName) {
+  const e = lifeEvents.find(e => e.id === id);
+  const t = EVENT_TYPES.find(t => t.val === typeName);
+  if (e && t) { e.type=typeName; e.incDelta=t.incDelta; e.livDelta=t.livDelta; renderEvents(); update(); }
+}
+
+function drawLifeChart(baseIncome, baseLiving, monthly, _) {
+  const svg = document.getElementById('svg-life');
+  const W=680, H=200, PL=42, PR=16, PT=14, PB=30;
+  const cW=W-PL-PR, cH=H-PT-PB;
+  const YEARS=30;
+
+  const pts=[], events=[];
+  for(let yr=0;yr<=YEARS;yr++){
+    let inc=baseIncome, liv=baseLiving;
+    lifeEvents.forEach(e=>{
+      if(yr>=e.year){ inc+=e.incDelta; liv+=e.livDelta; }
+    });
+    pts.push(inc-monthly-liv);
+    lifeEvents.forEach(e=>{if(e.year===yr) events.push({yr,label:e.type});});
+  }
+
+  const minV=Math.min(...pts,0), maxV=Math.max(...pts,20);
+  const range=maxV-minV||1;
+  const xS=i=>PL+i/YEARS*cW;
+  const yS=v=>PT+(1-(v-minV)/range)*cH;
+  const zero=yS(0);
+
+  let h='';
+  // Grid
+  for(let i=0;i<=4;i++){
+    const y=PT+i/4*cH, v=Math.round(maxV-(i/4)*range);
+    h+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#E8E4DC" stroke-width="1"/>`;
+    h+=`<text x="${PL-4}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#9AA0AE">${v}</text>`;
+  }
+  for(let i=0;i<=6;i++){
+    const xi=Math.round(i/6*YEARS), x=xS(xi);
+    h+=`<text x="${x.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#9AA0AE">${xi}年後</text>`;
+  }
+  // Zero line
+  if(zero>=PT && zero<=PT+cH){
+    h+=`<line x1="${PL}" y1="${zero.toFixed(1)}" x2="${W-PR}" y2="${zero.toFixed(1)}" stroke="#C02B2B" stroke-width="0.8" stroke-dasharray="4,3"/>`;
+    h+=`<text x="${PL-4}" y="${(zero+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#C02B2B">0</text>`;
+  }
+  // Area
+  const pathD=pts.map((v,i)=>(i===0?'M':'L')+xS(i).toFixed(1)+','+yS(v).toFixed(1)).join(' ');
+  h+=`<path d="${pathD} L${xS(YEARS).toFixed(1)},${(PT+cH).toFixed(1)} L${PL},${(PT+cH).toFixed(1)} Z" fill="rgba(42,122,75,0.1)"/>`;
+  h+=`<path d="${pathD}" fill="none" stroke="#2A7A4B" stroke-width="2"/>`;
+  // Event markers
+  const usedY={};
+  events.forEach(ev=>{
+    const x=xS(ev.yr), y=yS(pts[ev.yr]);
+    h+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(PT+cH).toFixed(1)}" stroke="rgba(201,150,58,0.5)" stroke-width="1" stroke-dasharray="3,3"/>`;
+    h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="var(--gold2)" stroke="#fff" stroke-width="1.5"/>`;
+    const labelY=usedY[ev.yr]?PT+20:PT+12;
+    usedY[ev.yr]=true;
+    h+=`<text x="${(x+5).toFixed(1)}" y="${labelY.toFixed(1)}" font-size="9" fill="#C9963A">${ev.label}</text>`;
+  });
+  // Negative shading
+  if(minV<0){
+    const negPts=pts.map((v,i)=>({x:xS(i),y:Math.max(yS(0),yS(v)),neg:v<0}));
+    let negPath='';
+    pts.forEach((v,i)=>{ if(v<0){ const x=xS(i).toFixed(1); negPath+=`${negPath?'L':'M'}${x},${zero.toFixed(1)} L${x},${yS(v).toFixed(1)}`; }});
+    if(negPath) h+=`<path d="${negPath}" fill="none" stroke="rgba(192,43,43,0.4)" stroke-width="3"/>`;
+  }
+  svg.innerHTML=h;
+
+  // Life advice
+  const negYrs=pts.filter(v=>v<0).length;
+  const minSurplus=Math.min(...pts);
+  const lifeItems=[];
+  if(negYrs===0) lifeItems.push({cls:'good',icon:'✅',title:'30年間を通じて手残りがプラス',body:'登録されたライフイベントを考慮しても、30年間を通じて月の手残りがプラスを維持しています。'});
+  else lifeItems.push({cls:'bad',icon:'🚨',title:`${negYrs}年間 手残りがマイナスになる時期あり`,body:`最小 ${f1(minSurplus)} 万円。赤いラインの期間は家計が赤字になる可能性があります。返済条件またはライフプランを見直してください。`});
+  if(lifeEvents.length===0) lifeItems.push({cls:'info',icon:'💡',title:'ライフイベントを追加してみましょう',body:'子どもの誕生・転職・定年などを追加すると将来の手残り変動が見えてきます。'});
+  else lifeItems.push({cls:'warn',icon:'📋',title:`${lifeEvents.length}件のイベントを反映中`,body:`登録済みイベント: ${lifeEvents.map(e=>e.year+'年後 '+e.type).join('、')}`});
+  document.getElementById('life-advice').innerHTML=lifeItems.map(it=>
+    `<div class="adv-item ${it.cls}"><div class="adv-icon">${it.icon}</div><div class="adv-title">${it.title}</div><div class="adv-body">${it.body}</div></div>`
+  ).join('');
+}
+
+// ── Region ──
+function onPrefChange() {
+  const pref = document.getElementById('sel-pref').value;
+  const sel = document.getElementById('sel-city');
+  sel.innerHTML = '<option value="">市区町村を選択してください</option>';
+  if (pref && CITY_MAP[pref]) {
+    CITY_MAP[pref].forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  }
+  updateRegion();
+}
+
+function updateRegion() {
+  const pref = document.getElementById('sel-pref').value;
+  const city = document.getElementById('sel-city').value;
+  const area = +document.getElementById('inp-area').value || 100;
+  const areaTsubo = area / 3.306; // ㎡ → 坪
+
+  if (!pref || !city) {
+    document.getElementById('region-summary').innerHTML =
+      '<div style="font-size:12px;color:var(--text3);padding:8px 0;">都道府県と市区町村を選択してください</div>';
+    document.getElementById('svg-region').innerHTML = '';
+    return;
+  }
+
+  const cd = CITY_DATA[city];
+  const rd = REGION_DATA[pref];
+  if (!cd) return;
+
+  const latestTsubo = cd.tsubo[cd.tsubo.length - 1]; // 最新坪単価
+  const landEst  = Math.round(latestTsubo * areaTsubo / 100) * 100;
+  const buildEst = Math.round(cd.build * areaTsubo / 100) * 100;
+
+  document.getElementById('region-chart-title').textContent =
+    `${city} — 地価推移（坪単価 万円/坪・2020〜2024年 概算参照値）`;
+
+  document.getElementById('region-summary').innerHTML = [
+    {label:'土地代の目安',   val:fmt(landEst)+' 万円',  sub:`${area}㎡（${areaTsubo.toFixed(1)}坪） × ${latestTsubo}万円/坪`},
+    {label:'建物費の目安',   val:fmt(buildEst)+' 万円', sub:`${area}㎡（${areaTsubo.toFixed(1)}坪） × ${cd.build}万円/坪`},
+    {label:'合計（参照値）', val:fmt(landEst+buildEst)+' 万円', sub:'諸費用（仲介・登記等）は別途 3〜5%'},
+  ].map(c=>`<div class="r-card">
+    <div class="r-card-label">${c.label}</div>
+    <div class="r-card-val">${c.val}</div>
+    <div class="r-card-sub">${c.sub}</div>
+  </div>`).join('');
+
+  drawRegionChart(city, cd.tsubo);
+}
+
+function drawRegionChart(city, tsuboVals) {
+  const svg=document.getElementById('svg-region');
+  const W=680,H=210,PL=52,PR=20,PT=14,PB=32;
+  const cW=W-PL-PR, cH=H-PT-PB;
+  const YEARS=[2020,2021,2022,2023,2024];
+  const minV=Math.max(0, Math.min(...tsuboVals)*0.92);
+  const maxV=Math.max(...tsuboVals)*1.08;
+  const range=maxV-minV||1;
+  const xS=i=>PL+i/(YEARS.length-1)*cW;
+  const yS=v=>PT+(1-(v-minV)/range)*cH;
+  let h='';
+  // Grid
+  for(let i=0;i<=4;i++){
+    const y=PT+i/4*cH;
+    const v=Math.round(maxV-i/4*range);
+    h+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#E8E4DC" stroke-width="1"/>`;
+    h+=`<text x="${PL-4}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#9AA0AE">${v}</text>`;
+  }
+  // Y軸ラベル
+  h+=`<text x="10" y="${(PT+cH/2).toFixed(1)}" text-anchor="middle" font-size="9" fill="#9AA0AE" transform="rotate(-90,10,${(PT+cH/2).toFixed(1)})">万円/坪</text>`;
+  YEARS.forEach((yr,i)=>{
+    h+=`<text x="${xS(i).toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="9" fill="#9AA0AE">${yr}年</text>`;
+  });
+  const pathD=tsuboVals.map((v,i)=>(i===0?'M':'L')+xS(i).toFixed(1)+','+yS(v).toFixed(1)).join(' ');
+  h+=`<path d="${pathD} L${xS(tsuboVals.length-1).toFixed(1)},${(PT+cH).toFixed(1)} L${PL},${(PT+cH).toFixed(1)} Z" fill="rgba(44,59,96,0.08)"/>`;
+  h+=`<path d="${pathD}" fill="none" stroke="#2C3B60" stroke-width="2"/>`;
+  tsuboVals.forEach((v,i)=>{
+    const cx=xS(i).toFixed(1), cy=yS(v).toFixed(1);
+    h+=`<circle cx="${cx}" cy="${cy}" r="5" fill="#2C3B60" stroke="#fff" stroke-width="1.5"/>`;
+    const labelY = i===0 ? (+cy+14).toFixed(1) : (+cy-9).toFixed(1);
+    h+=`<text x="${cx}" y="${labelY}" text-anchor="middle" font-size="10" font-weight="500" fill="#2C3B60">${v}万</text>`;
+  });
+  // 変化率
+  const first=tsuboVals[0], last=tsuboVals[tsuboVals.length-1];
+  const chg=((last-first)/first*100).toFixed(1);
+  const chgCol = chg>=0?'#2A7A4B':'#C02B2B';
+  h+=`<text x="${(W-PR-4).toFixed(1)}" y="${(PT+14).toFixed(1)}" text-anchor="end" font-size="10" font-weight="500" fill="${chgCol}">5年で${chg>=0?'+':''}${chg}%</text>`;
+  svg.innerHTML=h;
+}
+
+// ── Init ──
+renderEvents();
+onPrefChange();
+update();
+</script>
+</body>
+</html>
